@@ -1,0 +1,28 @@
+---
+- name: Install Flannel networking
+  when: networking_plugin == 'flannel'
+  block:
+    - name: Download Flannel manifest
+      get_url:
+        url: "https://raw.githubusercontent.com/flannel-io/flannel/v{{ flannel_version }}/Documentation/kube-flannel.yml"
+        dest: /tmp/kube-flannel.yaml
+        mode: "0644"
+
+    - name: Update Flannel pod CIDR
+      replace:
+        path: /tmp/kube-flannel.yaml
+        regexp: '"Network": "10.244.0.0/16"'
+        replace: '"Network": "{{ pod_network_cidr }}"'
+
+    - name: Apply Flannel manifest
+      command: kubectl apply -f /tmp/kube-flannel.yaml
+      changed_when: false
+
+    - name: Wait for Flannel to be ready
+      command: kubectl wait --for=condition=ready pod -l app=flannel -n kube-flannel --timeout=300s
+      changed_when: false
+
+    - name: Clean up Flannel manifest
+      file:
+        path: /tmp/kube-flannel.yaml
+        state: absent

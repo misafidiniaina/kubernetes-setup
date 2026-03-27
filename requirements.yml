@@ -1,0 +1,5 @@
+# Ansible Galaxy requirements
+# Install with: ansible-galaxy install -r requirements.yml
+
+# No external roles required for this project
+# All roles are custom-built for this Kubernetes setup

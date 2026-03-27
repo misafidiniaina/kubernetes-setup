@@ -1,0 +1,171 @@
+---
+- name: Disable swap
+  command: swapoff -a
+  when: disable_swap | bool
+  tags: ["swap"]
+
+- name: Remove swap from fstab
+  lineinfile:
+    path: /etc/fstab
+    regexp: "^.*swap.*$"
+    state: absent
+  when: disable_swap | bool
+  tags: ["swap"]
+
+- name: Set timezone
+  timezone:
+    name: "{{ timezone }}"
+  tags: ["timezone"]
+
+- name: Install NTP
+  package:
+    name: ntp
+    state: present
+  when: ansible_os_family == 'Debian'
+  tags: ["ntp"]
+
+- name: Configure NTP servers
+  template:
+    src: ntp.conf.j2
+    dest: /etc/ntp.conf
+    backup: true
+  notify: Restart NTP
+  when: ntp_servers | length > 0
+  tags: ["ntp"]
+
+- name: Start and enable NTP
+  service:
+    name: ntp
+    state: started
+    enabled: true
+  when: ntp_servers | length > 0
+  tags: ["ntp"]
+
+- name: Install required packages
+  package:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - apt-transport-https
+    - ca-certificates
+    - curl
+    - gnupg
+    - lsb-release
+    - software-properties-common
+    - iptables
+    - iproute2
+    - socat
+    - util-linux
+    - mount
+    - ebtables
+    - ethtool
+  when: ansible_os_family == 'Debian'
+  tags: ["packages"]
+
+- name: Install additional packages
+  package:
+    name: "{{ additional_packages }}"
+    state: present
+  when: additional_packages | length > 0
+  tags: ["packages"]
+
+- name: Create Kubernetes directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - /etc/kubernetes
+    - /var/lib/kubernetes
+    - /var/lib/kubelet
+    - /opt/cni/bin
+    - /etc/cni/net.d
+  tags: ["directories"]
+
+- name: Configure sysctl for Kubernetes
+  sysctl:
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+    state: present
+    reload: true
+  loop:
+    - { name: "net.bridge.bridge-nf-call-iptables", value: "1" }
+    - { name: "net.bridge.bridge-nf-call-ip6tables", value: "1" }
+    - { name: "net.ipv4.ip_forward", value: "1" }
+    - { name: "net.ipv6.conf.all.forwarding", value: "1" }
+  tags: ["sysctl"]
+
+- name: Load br_netfilter module
+  modprobe:
+    name: br_netfilter
+    state: present
+  tags: ["modules"]
+
+- name: Ensure br_netfilter is loaded on boot
+  copy:
+    dest: /etc/modules-load.d/k8s.conf
+    content: |
+      br_netfilter
+      overlay
+  tags: ["modules"]
+
+- name: Configure firewall
+  when: enable_firewall | bool
+  block:
+    - name: Install ufw
+      package:
+        name: ufw
+        state: present
+      when: ansible_os_family == 'Debian'
+
+    - name: Allow SSH
+      ufw:
+        rule: allow
+        port: "{{ ssh_port }}"
+        proto: tcp
+
+    - name: Allow Kubernetes API server
+      ufw:
+        rule: allow
+        port: "{{ kube_api_port }}"
+        proto: tcp
+      when: inventory_hostname in groups['kube_control_plane']
+
+    - name: Allow etcd client port
+      ufw:
+        rule: allow
+        port: "2379"
+        proto: tcp
+      when: inventory_hostname in groups['kube_control_plane']
+
+    - name: Allow etcd peer port
+      ufw:
+        rule: allow
+        port: "2380"
+        proto: tcp
+      when: inventory_hostname in groups['kube_control_plane']
+
+    - name: Allow kubelet API
+      ufw:
+        rule: allow
+        port: "10250"
+        proto: tcp
+
+    - name: Allow NodePort services
+      ufw:
+        rule: allow
+        port: "30000:32767"
+        proto: tcp
+
+    - name: Enable UFW
+      ufw:
+        state: enabled
+  tags: ["firewall"]
+
+- name: Install container runtime
+  include_tasks: install-{{ container_runtime }}.yml
+  tags: ["container-runtime"]
+
+- name: Install Kubernetes components
+  include_tasks: install-kubernetes.yml
+  tags: ["kubernetes"]

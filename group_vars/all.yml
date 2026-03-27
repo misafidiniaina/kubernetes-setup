@@ -1,0 +1,96 @@
+# Kubernetes version
+kubernetes_version: "1.28.0"
+
+# Container runtime (containerd or docker)
+container_runtime: containerd
+
+# Networking
+pod_network_cidr: "10.244.0.0/16"
+service_cidr: "10.96.0.0/12"
+cluster_dns: "10.96.0.10"
+
+# Networking plugin (calico, flannel, weave)
+networking_plugin: calico
+
+# Load balancer for HA control plane (if using external LB)
+load_balancer_address: "192.168.1.100"
+
+# etcd configuration
+etcd_version: "3.5.9"
+
+# Docker version (if using docker)
+docker_version: "24.0.5"
+
+# Containerd version
+containerd_version: "1.7.6"
+
+# CNI plugins version
+cni_plugins_version: "1.3.0"
+
+# Calico version
+calico_version: "3.26.1"
+
+# Flannel version
+flannel_version: "0.22.0"
+
+# Weave version
+weave_version: "2.8.1"
+
+# Kubernetes API server port
+kube_api_port: 6443
+
+# Kubernetes dashboard
+enable_dashboard: false
+
+# Ingress controller
+enable_ingress_nginx: true
+
+# Metrics server
+enable_metrics_server: true
+
+# Cert manager
+enable_cert_manager: false
+
+# Prometheus monitoring
+enable_prometheus: false
+
+# Logging (EFK stack)
+enable_logging: false
+
+# Backup
+enable_backup: false
+
+# Security
+enable_audit_log: true
+enable_pod_security_standards: true
+
+# Node labels and taints
+master_node_labels:
+  node-role.kubernetes.io/control-plane: ""
+  node-role.kubernetes.io/master: ""
+
+worker_node_labels:
+  node-role.kubernetes.io/worker: ""
+
+# Additional packages
+additional_packages: []
+
+# NTP servers
+ntp_servers:
+  - 0.pool.ntp.org
+  - 1.pool.ntp.org
+
+# Timezone
+timezone: UTC
+
+# SSH settings
+ssh_port: 22
+
+# Firewall settings
+enable_firewall: true
+
+# SELinux
+selinux_state: disabled
+
+# Swap
+disable_swap: true

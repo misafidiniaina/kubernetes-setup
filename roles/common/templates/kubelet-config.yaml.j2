@@ -1,0 +1,36 @@
+apiVersion: kubelet.config.k8s.io/v1beta1
+kind: KubeletConfiguration
+cgroupDriver: systemd
+clusterDNS:
+- {{ cluster_dns }}
+clusterDomain: cluster.local
+containerRuntimeEndpoint: "unix:///var/run/containerd/containerd.sock"
+failSwapOn: {{ disable_swap | bool | lower }}
+kubeReserved:
+  cpu: 100m
+  memory: 100Mi
+  ephemeral-storage: 1Gi
+kubeReservedCgroup: /kubelet
+systemReserved:
+  cpu: 100m
+  memory: 100Mi
+  ephemeral-storage: 1Gi
+systemReservedCgroup: /system
+enforceNodeAllocatable:
+- pods
+- kube-reserved
+- system-reserved
+eventRecordQPS: 5
+eventBurst: 10
+kubeAPIQPS: 5
+kubeAPIBurst: 10
+serializeImagePulls: false
+maxOpenFiles: 1000000
+maxPods: 110
+readOnlyPort: 0
+protectKernelDefaults: true
+makeIPTablesUtilChains: true
+iptablesMasqueradeBit: 14
+iptablesDropBit: 15
+featureGates:
+  RotateKubeletServerCertificate: true

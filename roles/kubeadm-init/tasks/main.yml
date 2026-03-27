@@ -1,0 +1,105 @@
+---
+- name: Check if cluster is already initialized
+  stat:
+    path: /etc/kubernetes/admin.conf
+  register: kubeadm_init_check
+
+- name: Generate kubeadm config
+  template:
+    src: kubeadm-config.yaml.j2
+    dest: /tmp/kubeadm-config.yaml
+    backup: true
+  when: not kubeadm_init_check.stat.exists
+
+- name: Initialize Kubernetes cluster
+  command: kubeadm init --config /tmp/kubeadm-config.yaml --upload-certs
+  register: kubeadm_init
+  when: not kubeadm_init_check.stat.exists
+  changed_when: "'Your Kubernetes control-plane has initialized successfully' in kubeadm_init.stdout"
+
+- name: Create kube config directory
+  file:
+    path: ~/.kube
+    state: directory
+    mode: "0755"
+
+- name: Copy admin kubeconfig
+  copy:
+    src: /etc/kubernetes/admin.conf
+    dest: ~/.kube/config
+    remote_src: true
+    mode: "0600"
+  when: kubeadm_init.changed
+
+- name: Install networking plugin
+  include_tasks: install-{{ networking_plugin }}.yml
+  when: kubeadm_init.changed
+
+- name: Generate join command for control plane
+  command: kubeadm token create --print-join-command
+  register: join_command
+  when: kubeadm_init.changed
+  changed_when: false
+
+- name: Store join command
+  set_fact:
+    control_plane_join_command: "{{ join_command.stdout }}"
+  when: kubeadm_init.changed
+
+- name: Generate join command for workers
+  command: kubeadm token create --print-join-command
+  register: worker_join_command_output
+  when: kubeadm_init.changed
+  changed_when: false
+
+- name: Store worker join command
+  set_fact:
+    worker_join_command: "{{ worker_join_command_output.stdout }}"
+  when: kubeadm_init.changed
+
+- name: Store join command for control plane
+  copy:
+    content: "{{ control_plane_join_command }}"
+    dest: /tmp/control-plane-join-command.txt
+    mode: "0600"
+  when: kubeadm_init.changed
+
+- name: Store join command for workers
+  copy:
+    content: "{{ worker_join_command }}"
+    dest: /tmp/worker-join-command.txt
+    mode: "0600"
+  when: kubeadm_init.changed
+
+- name: Store join command for workers
+  copy:
+    content: "{{ worker_join_command }}"
+    dest: /tmp/worker-join-command.txt
+    mode: "0600"
+  when: kubeadm_init.changed
+
+- name: Wait for API server to be ready
+  uri:
+    url: https://localhost:{{ kube_api_port }}/healthz
+    validate_certs: false
+    status_code: 200
+  register: api_health
+  until: api_health.status == 200
+  retries: 30
+  delay: 10
+  when: kubeadm_init.changed
+
+- name: Apply node labels
+  command: kubectl label node {{ inventory_hostname }} {{ master_node_labels | join(' ') }}
+  when: master_node_labels is defined and kubeadm_init.changed
+  changed_when: false
+
+- name: Remove taint from master node (if single master)
+  command: kubectl taint nodes {{ inventory_hostname }} node-role.kubernetes.io/control-plane:NoSchedule-
+  when: groups['kube_control_plane'] | length == 1 and kubeadm_init.changed
+  changed_when: false
+
+- name: Clean up temporary files
+  file:
+    path: /tmp/kubeadm-config.yaml
+    state: absent

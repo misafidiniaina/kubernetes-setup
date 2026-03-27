@@ -1,0 +1,11 @@
+---
+- name: Install Weave networking
+  when: networking_plugin == 'weave'
+  block:
+    - name: Apply Weave manifest
+      command: kubectl apply -f "https://cloud.weave.works/k8s/net?k8s-version=$(kubectl version | base64 | tr -d '\n')&env.IPALLOC_RANGE={{ pod_network_cidr }}"
+      changed_when: false
+
+    - name: Wait for Weave to be ready
+      command: kubectl wait --for=condition=ready pod -l name=weave-net -n kube-system --timeout=300s
+      changed_when: false

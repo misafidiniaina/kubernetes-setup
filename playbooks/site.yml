@@ -1,0 +1,81 @@
+---
+- name: Bootstrap Kubernetes cluster with kubeadm
+  hosts: k8s_cluster
+  become: true
+  gather_facts: true
+  pre_tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: true
+        cache_valid_time: 3600
+      when: ansible_os_family == 'Debian'
+      tags: ["prerequisites"]
+
+    - name: Install python3 and pip
+      package:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - python3
+        - python3-pip
+      when: ansible_os_family == 'Debian'
+      tags: ["prerequisites"]
+
+  roles:
+    - common
+
+- name: Initialize Kubernetes control plane
+  hosts: kube_control_plane[0]
+  become: true
+  gather_facts: true
+  roles:
+    - kubeadm-init
+  tags: ["init"]
+
+- name: Join additional control plane nodes
+  hosts: kube_control_plane[1:]
+  become: true
+  gather_facts: true
+  roles:
+    - kubeadm-join
+  tags: ["join", "control-plane"]
+  serial: 1
+
+- name: Join worker nodes
+  hosts: kube_node
+  become: true
+  gather_facts: true
+  roles:
+    - kubeadm-join
+  tags: ["join", "workers"]
+  serial: 10
+
+- name: Configure networking
+  hosts: kube_control_plane[0]
+  become: true
+  gather_facts: true
+  roles:
+    - networking
+  tags: ["networking"]
+
+- name: Finalize cluster setup
+  hosts: kube_control_plane[0]
+  become: true
+  gather_facts: true
+  tasks:
+    - name: Wait for all nodes to be ready
+      command: kubectl get nodes --no-headers
+      register: nodes
+      until: (nodes.stdout_lines | length) == (groups['k8s_cluster'] | length)
+      retries: 30
+      delay: 10
+      changed_when: false
+
+    - name: Show cluster status
+      command: kubectl get nodes -o wide
+      changed_when: false
+
+    - name: Show cluster info
+      command: kubectl cluster-info
+      changed_when: false
+  tags: ["finalize"]

@@ -1,0 +1,41 @@
+---
+- name: Add Kubernetes GPG key
+  apt_key:
+    url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+    state: present
+
+- name: Add Kubernetes repository
+  apt_repository:
+    repo: "deb https://apt.kubernetes.io/ kubernetes-xenial main"
+    state: present
+    filename: kubernetes
+
+- name: Install kubelet, kubeadm, kubectl
+  package:
+    name:
+      - kubelet={{ kubernetes_version }}-00
+      - kubeadm={{ kubernetes_version }}-00
+      - kubectl={{ kubernetes_version }}-00
+    state: present
+    update_cache: true
+
+- name: Hold Kubernetes packages
+  dpkg_selections:
+    name: "{{ item }}"
+    selection: hold
+  loop:
+    - kubelet
+    - kubeadm
+    - kubectl
+
+- name: Enable kubelet service
+  service:
+    name: kubelet
+    enabled: true
+
+- name: Configure kubelet
+  template:
+    src: kubelet-config.yaml.j2
+    dest: /var/lib/kubelet/config.yaml
+    backup: true
+  notify: Restart kubelet

@@ -1,0 +1,57 @@
+---
+- name: Check if node is already joined
+  stat:
+    path: /etc/kubernetes/kubelet.conf
+  register: kubelet_conf_check
+
+- name: Get join command from first master
+  command: ssh -o StrictHostKeyChecking=no {{ hostvars[groups['kube_control_plane'][0]]['ansible_host'] }} "cat /tmp/control-plane-join-command.txt"
+  register: join_cmd
+  when: inventory_hostname in groups['kube_control_plane'] and not kubelet_conf_check.stat.exists and groups['kube_control_plane'] | length > 1
+  delegate_to: localhost
+  changed_when: false
+
+- name: Get worker join command from first master
+  command: ssh -o StrictHostKeyChecking=no {{ hostvars[groups['kube_control_plane'][0]]['ansible_host'] }} "cat /tmp/worker-join-command.txt"
+  register: worker_join_cmd
+  when: inventory_hostname in groups['kube_node'] and not kubelet_conf_check.stat.exists
+  delegate_to: localhost
+  changed_when: false
+
+- name: Join control plane node
+  command: "{{ join_cmd.stdout }} --control-plane --certificate-key $(ssh -o StrictHostKeyChecking=no {{ hostvars[groups['kube_control_plane'][0]]['ansible_host'] }} 'kubeadm init phase upload-certs --upload-certs | tail -1')"
+  when: inventory_hostname in groups['kube_control_plane'] and not kubelet_conf_check.stat.exists and groups['kube_control_plane'] | length > 1
+  changed_when: false
+
+- name: Join worker node
+  command: "{{ worker_join_cmd.stdout }}"
+  when: inventory_hostname in groups['kube_node'] and not kubelet_conf_check.stat.exists
+  changed_when: false
+
+- name: Create kube config directory
+  file:
+    path: ~/.kube
+    state: directory
+    mode: "0755"
+  when: not kubelet_conf_check.stat.exists
+
+- name: Copy kubeconfig from master
+  command: scp -o StrictHostKeyChecking=no {{ hostvars[groups['kube_control_plane'][0]]['ansible_host'] }}:/etc/kubernetes/admin.conf ~/.kube/config
+  when: not kubelet_conf_check.stat.exists
+  changed_when: false
+
+- name: Set kubeconfig permissions
+  file:
+    path: ~/.kube/config
+    mode: "0600"
+  when: not kubelet_conf_check.stat.exists
+
+- name: Apply node labels
+  command: kubectl label node {{ inventory_hostname }} {{ master_node_labels | join(' ') }}
+  when: inventory_hostname in groups['kube_control_plane'] and master_node_labels is defined and not kubelet_conf_check.stat.exists
+  changed_when: false
+
+- name: Apply worker node labels
+  command: kubectl label node {{ inventory_hostname }} {{ worker_node_labels | join(' ') }}
+  when: inventory_hostname in groups['kube_node'] and worker_node_labels is defined and not kubelet_conf_check.stat.exists
+  changed_when: false

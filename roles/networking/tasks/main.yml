@@ -1,0 +1,71 @@
+---
+- name: Install additional networking components
+  when: networking_plugin == 'calico'
+  block:
+    - name: Install Calicoctl
+      get_url:
+        url: "https://github.com/projectcalico/calico/releases/download/v{{ calico_version }}/calicoctl-linux-amd64"
+        dest: /usr/local/bin/calicoctl
+        mode: "0755"
+
+    - name: Verify Calico installation
+      command: calicoctl get nodes
+      changed_when: false
+
+- name: Install Ingress Nginx
+  when: enable_ingress_nginx | bool
+  block:
+    - name: Add Ingress Nginx Helm repo
+      command: helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+      changed_when: false
+
+    - name: Update Helm repos
+      command: helm repo update
+      changed_when: false
+
+    - name: Install Ingress Nginx
+      command: helm install ingress-nginx ingress-nginx/ingress-nginx --namespace ingress-nginx --create-namespace
+      changed_when: false
+
+- name: Install Metrics Server
+  when: enable_metrics_server | bool
+  block:
+    - name: Download Metrics Server manifest
+      get_url:
+        url: "https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml"
+        dest: /tmp/metrics-server.yaml
+        mode: "0644"
+
+    - name: Update Metrics Server for insecure TLS
+      replace:
+        path: /tmp/metrics-server.yaml
+        regexp: "        - --kubelet-insecure-tls"
+        replace: "        - --kubelet-insecure-tls=true"
+
+    - name: Apply Metrics Server manifest
+      command: kubectl apply -f /tmp/metrics-server.yaml
+      changed_when: false
+
+    - name: Clean up Metrics Server manifest
+      file:
+        path: /tmp/metrics-server.yaml
+        state: absent
+
+- name: Install Cert Manager
+  when: enable_cert_manager | bool
+  block:
+    - name: Install Cert Manager CRDs
+      command: kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.12.0/cert-manager.crds.yaml
+      changed_when: false
+
+    - name: Add Jetstack Helm repo
+      command: helm repo add jetstack https://charts.jetstack.io
+      changed_when: false
+
+    - name: Update Helm repos
+      command: helm repo update
+      changed_when: false
+
+    - name: Install Cert Manager
+      command: helm install cert-manager jetstack/cert-manager --namespace cert-manager --create-namespace --version v1.12.0
+      changed_when: false

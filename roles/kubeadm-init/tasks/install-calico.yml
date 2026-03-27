@@ -1,0 +1,28 @@
+---
+- name: Install Calico networking
+  when: networking_plugin == 'calico'
+  block:
+    - name: Download Calico manifest
+      get_url:
+        url: "https://raw.githubusercontent.com/projectcalico/calico/v{{ calico_version }}/manifests/calico.yaml"
+        dest: /tmp/calico.yaml
+        mode: "0644"
+
+    - name: Update Calico pod CIDR
+      replace:
+        path: /tmp/calico.yaml
+        regexp: 'CALICO_IPV4POOL_CIDR=""'
+        replace: 'CALICO_IPV4POOL_CIDR="{{ pod_network_cidr }}"'
+
+    - name: Apply Calico manifest
+      command: kubectl apply -f /tmp/calico.yaml
+      changed_when: false
+
+    - name: Wait for Calico to be ready
+      command: kubectl wait --for=condition=ready pod -l k8s-app=calico-node -n kube-system --timeout=300s
+      changed_when: false
+
+    - name: Clean up Calico manifest
+      file:
+        path: /tmp/calico.yaml
+        state: absent
