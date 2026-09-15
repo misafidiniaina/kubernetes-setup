@@ -1,6 +1,6 @@
 # Makefile for Kubernetes Setup with Ansible
 
-.PHONY: help setup prerequisites init join workers networking finalize validate all clean syntax-check ping lint inventory
+.PHONY: help setup prerequisites init join workers networking finalize validate check test all clean syntax-check ping lint inventory
 
 # Default target
 help:
@@ -13,6 +13,8 @@ help:
 	@echo "  networking     - Install networking components"
 	@echo "  finalize       - Final cluster validation"
 	@echo "  validate       - Validate nodes and system pods"
+	@echo "  check          - Check local CLI dependencies"
+	@echo "  test           - Run Go tests"
 	@echo "  clean          - Clean up temporary files"
 	@echo "  syntax-check   - Check playbook syntax"
 	@echo "  ping           - Test connectivity to all hosts"
@@ -47,6 +49,12 @@ finalize:
 
 validate: syntax-check
 	ansible-playbook $(ANSIBLE_OPTS) -i $(INVENTORY) $(PLAYBOOK) --tags finalize
+
+check:
+	go run ./cmd/kube-bootstrap check
+
+test:
+	go test ./...
 
 # Utilities
 syntax-check:

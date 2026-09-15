@@ -38,6 +38,25 @@ make setup
 make validate
 ```
 
+## CLI de vérification
+
+Le premier module Go vérifie les dépendances de la machine de contrôle avant de lancer Ansible :
+
+```bash
+go run ./cmd/kube-bootstrap check
+```
+
+Les commandes obligatoires sont `ansible`, `ansible-playbook`, `ssh` et `ssh-keygen`. `kubectl` est optionnel et sert à la validation locale du cluster. Un outil obligatoire absent bloque le déploiement et indique le futur module `kube-bootstrap install`.
+
+Pour exécuter le même contrôle avec le Makefile :
+
+```bash
+make test
+make check
+```
+
+Le module `check` est testé avec un exécuteur simulé ; les tests ne dépendent donc pas des outils installés sur la machine de développement.
+
 Le playbook complet est disponible dans `playbooks/site.yml`. Pour une exécution sans `make` :
 
 ```bash
