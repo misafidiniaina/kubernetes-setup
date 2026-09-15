@@ -63,12 +63,8 @@
   become: true
   gather_facts: true
   tasks:
-    - name: Wait for all nodes to be ready
-      command: kubectl get nodes --no-headers
-      register: nodes
-      until: (nodes.stdout_lines | length) == (groups['k8s_cluster'] | length)
-      retries: 30
-      delay: 10
+    - name: Wait for all nodes to be Ready
+      command: kubectl wait --for=condition=Ready nodes --all --timeout=300s
       changed_when: false
 
     - name: Show cluster status

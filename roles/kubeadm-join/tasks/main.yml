@@ -19,14 +19,16 @@
   changed_when: false
 
 - name: Join control plane node
-  command: "{{ join_cmd.stdout }} --control-plane --certificate-key $(ssh -o StrictHostKeyChecking=no {{ hostvars[groups['kube_control_plane'][0]]['ansible_host'] }} 'kubeadm init phase upload-certs --upload-certs | tail -1')"
+  shell: "{{ join_cmd.stdout }} --control-plane --certificate-key $(ssh -o StrictHostKeyChecking=no {{ hostvars[groups['kube_control_plane'][0]]['ansible_host'] }} 'kubeadm init phase upload-certs --upload-certs | tail -1')"
   when: inventory_hostname in groups['kube_control_plane'] and not kubelet_conf_check.stat.exists and groups['kube_control_plane'] | length > 1
   changed_when: false
+  no_log: true
 
 - name: Join worker node
   command: "{{ worker_join_cmd.stdout }}"
   when: inventory_hostname in groups['kube_node'] and not kubelet_conf_check.stat.exists
   changed_when: false
+  no_log: true
 
 - name: Create kube config directory
   file:

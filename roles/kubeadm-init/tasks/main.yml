@@ -71,13 +71,6 @@
     mode: "0600"
   when: kubeadm_init.changed
 
-- name: Store join command for workers
-  copy:
-    content: "{{ worker_join_command }}"
-    dest: /tmp/worker-join-command.txt
-    mode: "0600"
-  when: kubeadm_init.changed
-
 - name: Wait for API server to be ready
   uri:
     url: https://localhost:{{ kube_api_port }}/healthz

@@ -1,189 +1,111 @@
-# Kubernetes Setup with Ansible and Kubeadm
+# Kubernetes Cluster Bootstrap with Ansible
 
-This Ansible project provides a scalable and production-ready way to deploy Kubernetes clusters using kubeadm.
+Déployer rapidement un cluster Kubernetes sur des machines Linux existantes, sans configurer chaque serveur manuellement. L'inventaire décrit les nœuds accessibles en SSH ; Ansible prépare les systèmes, installe containerd et Kubernetes, initialise le control plane, rejoint les nœuds et installe le réseau du cluster.
 
-## Features
+## Ce que le projet automatise
 
-- **Scalable Architecture**: Support for multi-master HA clusters
-- **Multiple Container Runtimes**: Containerd and Docker support
-- **Networking Plugins**: Calico, Flannel, and Weave support
-- **Security Best Practices**: Audit logging, RBAC, pod security standards
-- **Add-ons**: Ingress Nginx, Metrics Server, Cert Manager
-- **Idempotent**: Safe to run multiple times
-- **Tagged Tasks**: Selective execution of components
+- préparation Ubuntu/Debian : swap, modules kernel, sysctl, NTP et firewall ;
+- installation de containerd, kubelet, kubeadm et kubectl ;
+- initialisation du premier control plane avec kubeadm ;
+- ajout de control planes supplémentaires et de workers ;
+- installation de Calico, Flannel ou Weave ;
+- installation optionnelle d'Ingress NGINX, Metrics Server et cert-manager ;
+- validation finale des nœuds et de l'état du cluster ;
+- exécution par étapes grâce aux tags Ansible.
 
-## Prerequisites
+Le projet vise un déploiement reproductible sur une infrastructure existante. Il ne provisionne pas les machines et ne remplace pas une architecture de production complète avec load balancer externe, sauvegardes et gestion centralisée des secrets.
 
-- Ansible 2.9+
-- Ubuntu/Debian servers
-- SSH access to all nodes
-- At least 2GB RAM and 2 CPUs per node
-- Network connectivity between all nodes
+## Prérequis
 
-## Quick Start
+- Ansible 2.9 ou une version plus récente ;
+- nœuds Ubuntu/Debian avec au moins 2 CPU et 2 Go de RAM ;
+- accès SSH depuis la machine qui exécute Ansible ;
+- un utilisateur avec privilèges `sudo` ;
+- connectivité réseau entre les nœuds ;
+- une seule version de Kubernetes définie dans `group_vars/all.yml`.
 
-1. **Clone this repository**
-
-   ```bash
-   git clone <repository-url>
-   cd kubernetes-setup
-   ```
-
-2. **Configure inventory**
-   Edit `inventory/hosts.ini` with your server details:
-
-   ```ini
-   [masters]
-   master1 ansible_host=192.168.1.10
-   master2 ansible_host=192.168.1.11
-   master3 ansible_host=192.168.1.12
-
-   [workers]
-   worker1 ansible_host=192.168.1.20
-   worker2 ansible_host=192.168.1.21
-   ```
-
-3. **Configure variables**
-   Edit `group_vars/all.yml` to customize your deployment
-
-4. **Run the playbook**
-   ```bash
-   ansible-playbook -i inventory/hosts.ini playbooks/site.yml
-   ```
-
-## Project Structure
-
-```
-.
-├── ansible.cfg                 # Ansible configuration
-├── inventory/
-│   └── hosts.ini              # Inventory file
-├── group_vars/
-│   └── all.yml                # Global variables
-├── host_vars/                 # Host-specific variables
-├── roles/
-│   ├── common/                # Common setup (prerequisites, container runtime, k8s components)
-│   ├── kubeadm-init/          # Control plane initialization
-│   ├── kubeadm-join/          # Node joining
-│   └── networking/            # Networking and add-ons
-└── playbooks/
-    └── site.yml               # Main playbook
-```
-
-## Configuration Options
-
-### Cluster Configuration
-
-- `kubernetes_version`: Kubernetes version to install
-- `container_runtime`: `containerd` or `docker`
-- `networking_plugin`: `calico`, `flannel`, or `weave`
-- `pod_network_cidr`: Pod network CIDR
-- `service_cidr`: Service network CIDR
-
-### High Availability
-
-- `load_balancer_address`: External load balancer IP for HA control plane
-- Multiple masters in inventory for HA setup
-
-### Security
-
-- `enable_audit_log`: Enable Kubernetes audit logging
-- `enable_pod_security_standards`: Enable pod security standards
-- `disable_swap`: Disable swap (required for Kubernetes)
-
-### Add-ons
-
-- `enable_ingress_nginx`: Install NGINX Ingress Controller
-- `enable_metrics_server`: Install Kubernetes Metrics Server
-- `enable_cert_manager`: Install cert-manager
-
-## Running Specific Tasks
-
-Use tags to run specific parts of the deployment:
+## Déploiement rapide
 
 ```bash
-# Run only prerequisites
-ansible-playbook -i inventory/hosts.ini playbooks/site.yml --tags prerequisites
+cp inventory/hosts.ini.example inventory/hosts.ini
+# Adapter les adresses, l'utilisateur et la clé SSH
+vim inventory/hosts.ini
+vim group_vars/all.yml
 
-# Initialize control plane only
-ansible-playbook -i inventory/hosts.ini playbooks/site.yml --tags init
-
-# Join workers only
-ansible-playbook -i inventory/hosts.ini playbooks/site.yml --tags workers
-
-# Install networking only
-ansible-playbook -i inventory/hosts.ini playbooks/site.yml --tags networking
+make ping
+make syntax-check
+make setup
+make validate
 ```
 
-## Scaling the Cluster
-
-### Adding Worker Nodes
-
-1. Add new workers to `inventory/hosts.ini`
-2. Run the join playbook:
-   ```bash
-   ansible-playbook -i inventory/hosts.ini playbooks/site.yml --tags workers
-   ```
-
-### Adding Control Plane Nodes
-
-1. Add new masters to `inventory/hosts.ini`
-2. Run the control plane join:
-   ```bash
-   ansible-playbook -i inventory/hosts.ini playbooks/site.yml --tags control-plane
-   ```
-
-## Troubleshooting
-
-### Common Issues
-
-1. **Kubelet fails to start**
-   - Check container runtime is running
-   - Verify cgroup driver configuration
-   - Check system requirements
-
-2. **Nodes fail to join**
-   - Verify network connectivity
-   - Check firewall rules
-   - Ensure token is valid (tokens expire after 24 hours)
-
-3. **Networking issues**
-   - Verify pod network CIDR configuration
-   - Check Calico/node status
-   - Ensure required ports are open
-
-### Logs and Debugging
+Le playbook complet est disponible dans `playbooks/site.yml`. Pour une exécution sans `make` :
 
 ```bash
-# Check kubelet logs
-journalctl -u kubelet -f
+ansible-playbook -i inventory/hosts.ini playbooks/site.yml
+```
 
-# Check container runtime logs
-journalctl -u containerd -f  # or docker
+## Exemple de résultat attendu
 
-# Check cluster status
-kubectl get nodes
+```text
+NAME      STATUS   ROLES           VERSION
+master-1  Ready    control-plane   v1.28.x
+worker-1  Ready    <none>          v1.28.x
+worker-2  Ready    <none>          v1.28.x
+```
+
+## Configuration
+
+Les variables principales sont définies dans `group_vars/all.yml` :
+
+| Variable                | Rôle                                     |
+| ----------------------- | ---------------------------------------- |
+| `kubernetes_version`    | Version installée de Kubernetes          |
+| `container_runtime`     | `containerd` ou `docker`                 |
+| `networking_plugin`     | `calico`, `flannel` ou `weave`           |
+| `pod_network_cidr`      | CIDR utilisé par le réseau des pods      |
+| `service_cidr`          | CIDR utilisé par les services Kubernetes |
+| `enable_ingress_nginx`  | Active l'Ingress Controller              |
+| `enable_metrics_server` | Active Metrics Server                    |
+| `enable_firewall`       | Configure UFW sur les nœuds              |
+
+Les tokens et certificats de join sont des données sensibles. Ils ne doivent pas être commités dans Git ni affichés dans les logs CI.
+
+## Exécution par étapes
+
+```bash
+make prerequisites
+make init
+make join
+make networking
+make validate
+```
+
+Les mêmes étapes sont disponibles avec les tags `prerequisites`, `init`, `join`, `workers`, `control-plane`, `networking` et `finalize`.
+
+## Structure
+
+```text
+inventory/       Inventaire des machines existantes
+group_vars/      Configuration commune du cluster
+playbooks/       Orchestration globale
+roles/common/    Préparation OS et composants Kubernetes
+roles/kubeadm-init/  Initialisation du premier control plane
+roles/kubeadm-join/  Ajout des autres nœuds
+roles/networking/   Add-ons et composants réseau
+```
+
+## Validation et dépannage
+
+```bash
+make validate
+kubectl get nodes -o wide
 kubectl get pods -A
+journalctl -u kubelet -f
+journalctl -u containerd -f
 ```
 
-## Security Considerations
+Pour modifier la taille du cluster, ajouter ou supprimer des hôtes dans l'inventaire puis relancer le playbook. Les tâches de bootstrap sont conçues pour être rejouées sans réinitialiser un nœud déjà configuré.
 
-- Use SSH key authentication
-- Restrict SSH access
-- Configure firewall rules
-- Enable audit logging
-- Use RBAC for access control
-- Keep Kubernetes and OS updated
-- Use secrets management for sensitive data
+## Compétences démontrées
 
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
-
-## License
-
-This project is licensed under the MIT License.
+Ansible, Linux, systemd, SSH, containerd, kubeadm, Kubernetes, réseau, firewall, idempotence, automatisation et validation d'infrastructure.
