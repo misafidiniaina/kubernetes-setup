@@ -51,10 +51,10 @@ validate: syntax-check
 	ansible-playbook $(ANSIBLE_OPTS) -i $(INVENTORY) $(PLAYBOOK) --tags finalize
 
 check:
-	go run ./cmd/kube-bootstrap check
+	cd cli && go run ./cmd/kube-bootstrap check
 
 test:
-	go test ./...
+	cd cli && go test ./...
 
 # Utilities
 syntax-check:

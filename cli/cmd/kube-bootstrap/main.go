@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/devops/kubernetes-setup/internal/checkcmd"
-	"github.com/devops/kubernetes-setup/internal/dependencies"
+	"github.com/devops/kubernetes-setup/cli/internal/checkcmd"
+	"github.com/devops/kubernetes-setup/cli/internal/dependencies"
 )
 
 func main() {

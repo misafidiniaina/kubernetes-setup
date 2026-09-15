@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/devops/kubernetes-setup/internal/dependencies"
+	"github.com/devops/kubernetes-setup/cli/internal/dependencies"
 )
 
 func TestRunReportsReadyEnvironment(t *testing.T) {

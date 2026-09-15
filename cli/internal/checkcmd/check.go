@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/devops/kubernetes-setup/internal/dependencies"
+	"github.com/devops/kubernetes-setup/cli/internal/dependencies"
 )
 
 func Execute(runner dependencies.CommandRunner, output io.Writer) int {
