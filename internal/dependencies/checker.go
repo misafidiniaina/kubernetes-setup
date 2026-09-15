@@ -42,6 +42,9 @@ func Check(runner CommandRunner) CheckResult {
 		{name: "ssh", required: true},
 		{name: "ssh-keygen", required: true},
 		{name: "kubectl", required: false},
+		{name: "make", required: false},
+		{name: "ansible-lint", required: false},
+		{name: "yamllint", required: false},
 	}
 
 	result := CheckResult{Ready: true}

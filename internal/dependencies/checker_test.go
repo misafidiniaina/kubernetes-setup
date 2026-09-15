@@ -41,6 +41,9 @@ func completeRunner() fakeCommandRunner {
 			"ssh":              "/usr/bin/ssh",
 			"ssh-keygen":       "/usr/bin/ssh-keygen",
 			"kubectl":          "/usr/bin/kubectl",
+			"make":             "/usr/bin/make",
+			"ansible-lint":     "/usr/bin/ansible-lint",
+			"yamllint":         "/usr/bin/yamllint",
 		},
 		versions: map[string]string{
 			"ansible":          "ansible [core 2.16.5]",
@@ -48,6 +51,9 @@ func completeRunner() fakeCommandRunner {
 			"ssh":              "OpenSSH_9.6",
 			"ssh-keygen":       "OpenSSH_9.6",
 			"kubectl":          "Client Version: v1.30.0",
+			"make":             "GNU Make 4.3",
+			"ansible-lint":     "ansible-lint 24.2.0",
+			"yamllint":         "yamllint 1.35.1",
 		},
 	}
 }
@@ -58,8 +64,8 @@ func TestCheckDependenciesReportsReadyWhenRequiredToolsAreInstalled(t *testing.T
 	if !result.Ready {
 		t.Fatalf("expected environment to be ready, got: %+v", result)
 	}
-	if len(result.Dependencies) != 5 {
-		t.Fatalf("expected 5 dependencies, got %d", len(result.Dependencies))
+	if len(result.Dependencies) != 8 {
+		t.Fatalf("expected 8 dependencies, got %d", len(result.Dependencies))
 	}
 }
 
@@ -84,6 +90,9 @@ func TestCheckDependenciesReportsMissingRequiredTool(t *testing.T) {
 func TestCheckDependenciesAllowsMissingOptionalTool(t *testing.T) {
 	runner := completeRunner()
 	delete(runner.paths, "kubectl")
+	delete(runner.paths, "make")
+	delete(runner.paths, "ansible-lint")
+	delete(runner.paths, "yamllint")
 
 	result := Check(runner)
 
@@ -96,6 +105,13 @@ func TestCheckDependenciesAllowsMissingOptionalTool(t *testing.T) {
 	}
 	if dependency.Required {
 		t.Fatal("kubectl should be optional")
+	}
+
+	for _, name := range []string{"make", "ansible-lint", "yamllint"} {
+		dependency := result.Dependency(name)
+		if dependency == nil || dependency.Installed || dependency.Required {
+			t.Fatalf("expected %s to be an optional missing dependency, got: %+v", name, dependency)
+		}
 	}
 }
 
