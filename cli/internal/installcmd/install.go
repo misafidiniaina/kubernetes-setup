@@ -27,7 +27,7 @@ func Execute(runner dependencies.CommandRunner, factory ManagerFactory, apply bo
 		fmt.Fprintf(output, "Unable to prepare installation: %v\n", err)
 		return 1
 	}
-	packageNames := packages.PackageNames(missingNames)
+	packageNames := packages.PackageNames(manager.Name(), missingNames)
 	command := packages.FormatCommand(manager, packageNames)
 	if !apply {
 		fmt.Fprintf(output, "Installation plan: %s\n", command)

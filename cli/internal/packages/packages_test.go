@@ -2,6 +2,7 @@ package packages
 
 import (
 	"errors"
+	"os"
 	"reflect"
 	"testing"
 )
@@ -29,11 +30,39 @@ func (runner *fakeCommandRunner) Run(name string, args ...string) error {
 }
 
 func TestPackageNamesDeduplicatesSharedPackages(t *testing.T) {
-	got := PackageNames([]string{"ansible", "ansible-playbook", "ssh", "ssh-keygen"})
+	got := PackageNames("apt-get", []string{"ansible", "ansible-playbook", "ssh", "ssh-keygen"})
 	want := []string{"ansible", "openssh-client"}
 
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("expected packages %v, got %v", want, got)
+	}
+}
+
+func TestPackageNamesUseManagerSpecificSSHPackage(t *testing.T) {
+	got := PackageNames("dnf", []string{"ssh", "ssh-keygen"})
+	want := []string{"openssh-clients"}
+
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("expected packages %v, got %v", want, got)
+	}
+}
+
+func TestReadOSRelease(t *testing.T) {
+	file := t.TempDir() + "/os-release"
+	content := "NAME=\"Kali GNU/Linux\"\nID=kali\nID_LIKE=debian\nVERSION_ID=\"2026.1\"\n"
+	if err := os.WriteFile(file, []byte(content), 0600); err != nil {
+		t.Fatalf("write os-release fixture: %v", err)
+	}
+
+	info, err := ReadOSRelease(file)
+	if err != nil {
+		t.Fatalf("read os-release: %v", err)
+	}
+	if info.DisplayName() != "Kali GNU/Linux 2026.1" {
+		t.Fatalf("unexpected OS name: %q", info.DisplayName())
+	}
+	if !reflect.DeepEqual(info.IDLike, []string{"debian"}) {
+		t.Fatalf("unexpected OS family: %v", info.IDLike)
 	}
 }
 

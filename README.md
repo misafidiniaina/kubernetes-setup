@@ -57,7 +57,7 @@ go -C cli test ./...
 go -C cli run ./cmd/kube-bootstrap check
 ```
 
-The installer supports Linux systems with `apt-get`. It prints an installation plan by default; pass `--apply` to execute it with `sudo`:
+The installer detects the Linux distribution from `/etc/os-release` and selects a supported package manager: `apt-get` for Debian-based systems, `dnf` or `yum` for Red Hat-based systems, and `pacman` for Arch-based systems. It prints an installation plan by default; pass `--apply` to execute it with `sudo`:
 
 ```bash
 go -C cli run ./cmd/kube-bootstrap install
