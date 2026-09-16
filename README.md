@@ -66,6 +66,10 @@ go -C cli run ./cmd/kube-bootstrap install --apply
 
 The `check` module is tested with a mock executor, so the tests do not depend on tools installed on the development machine. The CLI code is isolated in the `cli/` directory, separately from the Ansible playbooks and roles.
 
+## Continuous Integration
+
+GitHub Actions runs the CLI tests with the race detector, `go vet`, and a complete build on every pull request and push to `main`. See [CONTRIBUTING.md](CONTRIBUTING.md) for the workflow between feature scenarios, contributor tests, and CI.
+
 The complete playbook is available in `playbooks/site.yml`. To run it without `make`:
 
 ```bash
