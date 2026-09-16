@@ -64,7 +64,7 @@ go -C cli run ./cmd/kube-bootstrap install
 go -C cli run ./cmd/kube-bootstrap install --apply
 ```
 
-The `check` module is tested with a mock executor, so the tests do not depend on tools installed on the development machine. The CLI code is isolated in the `cli/` directory, separately from the Ansible playbooks and roles.
+The `check` module is tested with a mock executor, so the tests do not depend on tools installed on the development machine. The scenarios in `cli/features/` are executed with Godog and use fakes for package installation, so CI never changes the runner system. The CLI code is isolated in the `cli/` directory, separately from the Ansible playbooks and roles.
 
 ## Continuous Integration
 

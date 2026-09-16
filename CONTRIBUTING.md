@@ -9,6 +9,7 @@
 
 ```bash
 go -C cli test -race ./...
+go -C cli test -race ./features
 go -C cli vet ./...
 go -C cli build ./...
 ```
@@ -17,7 +18,7 @@ Every pull request and every push to `main` runs the same checks through GitHub 
 
 ## Feature scenarios and tests
 
-Feature files describe the expected behavior in business-readable language. They are the project requirements and acceptance criteria; they are not executed directly yet because this repository does not use a Gherkin runner.
+Feature files describe the expected behavior in business-readable language. They are the project requirements and acceptance criteria, and Godog executes them as part of the Go test suite.
 
 For each scenario, contributors must add automated Go coverage in the package that owns the behavior. Keep the scenario wording and the test intent aligned:
 
@@ -29,4 +30,4 @@ For each scenario, contributors must add automated Go coverage in the package th
 | Installation plan               | `internal/installcmd` and `internal/packages`   |
 | Applied installation            | `internal/installcmd` and `internal/packages`   |
 
-If the project later adopts Godog or another BDD runner, the existing scenarios can become executable without changing their role as acceptance criteria.
+The step definitions live in `cli/features/dependencies_test.go`. Keep them focused on wiring the scenario to application behavior; keep detailed business logic in the production packages and unit tests.
