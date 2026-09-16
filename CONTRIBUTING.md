@@ -16,6 +16,8 @@ go -C cli build ./...
 
 Every pull request and every push to `main` runs the same checks through GitHub Actions in `.github/workflows/ci.yml`.
 
+The terminal UI lives in `cli/internal/tui`. Keep it as a presentation layer: call the existing dependency and installation modules instead of duplicating their business logic.
+
 ## Feature scenarios and tests
 
 Feature files describe the expected behavior in business-readable language. They are the project requirements and acceptance criteria, and Godog executes them as part of the Go test suite.

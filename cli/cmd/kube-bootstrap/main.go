@@ -5,10 +5,13 @@ import (
 	"io"
 	"os"
 
+	tea "github.com/charmbracelet/bubbletea"
+
 	"github.com/devops/kubernetes-setup/cli/internal/checkcmd"
 	"github.com/devops/kubernetes-setup/cli/internal/dependencies"
 	"github.com/devops/kubernetes-setup/cli/internal/installcmd"
 	"github.com/devops/kubernetes-setup/cli/internal/packages"
+	"github.com/devops/kubernetes-setup/cli/internal/tui"
 )
 
 func main() {
@@ -40,6 +43,20 @@ func run(args []string, stdout, stderr io.Writer, runner dependencies.CommandRun
 			return packages.Detect(runner, packages.SystemCommandRunner{})
 		}
 		return installcmd.Execute(runner, factory, apply, stdout)
+	case "tui":
+		if len(args) > 1 {
+			fmt.Fprintln(stderr, "tui does not accept arguments")
+			printUsage(stderr)
+			return 2
+		}
+		managerFactory := func() (packages.Manager, error) {
+			return packages.Detect(runner, packages.SystemCommandRunner{})
+		}
+		if _, err := tea.NewProgram(tui.New(runner, managerFactory)).Run(); err != nil {
+			fmt.Fprintf(stderr, "TUI failed: %v\n", err)
+			return 1
+		}
+		return 0
 	case "help", "--help", "-h":
 		if len(args) > 1 {
 			fmt.Fprintln(stderr, "help does not accept arguments")
@@ -61,6 +78,7 @@ func printUsage(output io.Writer) {
 	fmt.Fprintln(output, "Commands:")
 	fmt.Fprintln(output, "  check    Check local deployment dependencies")
 	fmt.Fprintln(output, "  install  Plan or install missing dependencies")
+	fmt.Fprintln(output, "  tui      Open the interactive terminal UI")
 	fmt.Fprintln(output, "  help     Show this help")
 }
 
