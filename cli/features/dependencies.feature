@@ -1,19 +1,19 @@
-Feature: Vérification des outils locaux
+Feature: Local tool verification
 
-  Scenario: L'environnement de déploiement est complet
-    Given ansible, ansible-playbook, ssh et ssh-keygen sont installés
-    When l'utilisateur lance "kube-bootstrap check"
-    Then l'environnement est déclaré prêt
+  Scenario: The deployment environment is complete
+    Given ansible, ansible-playbook, ssh, and ssh-keygen are installed
+    When the user runs "kube-bootstrap check"
+    Then the environment is reported as ready
 
-  Scenario: Les outils optionnels de validation sont absents
-    Given les outils de déploiement obligatoires sont installés
-    And make, kubectl, ansible-lint et yamllint sont absents
-    When l'utilisateur lance "kube-bootstrap check"
-    Then l'environnement reste déclaré prêt
-    And les outils optionnels sont signalés comme manquants
+  Scenario: Optional validation tools are missing
+    Given the required deployment tools are installed
+    And make, kubectl, ansible-lint, and yamllint are missing
+    When the user runs "kube-bootstrap check"
+    Then the environment is still reported as ready
+    And the optional tools are reported as missing
 
-  Scenario: Un outil obligatoire est absent
-    Given ansible-playbook est absent
-    When l'utilisateur lance "kube-bootstrap check"
-    Then l'environnement est déclaré incomplet
-    And l'installation des dépendances est recommandée
+  Scenario: A required tool is missing
+    Given ansible-playbook is missing
+    When the user runs "kube-bootstrap check"
+    Then the environment is reported as incomplete
+    And dependency installation is recommended

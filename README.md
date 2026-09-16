@@ -1,34 +1,34 @@
 # Kubernetes Cluster Bootstrap with Ansible
 
-Déployer rapidement un cluster Kubernetes sur des machines Linux existantes, sans configurer chaque serveur manuellement. L'inventaire décrit les nœuds accessibles en SSH ; Ansible prépare les systèmes, installe containerd et Kubernetes, initialise le control plane, rejoint les nœuds et installe le réseau du cluster.
+Quickly deploy a Kubernetes cluster on existing Linux machines without configuring each server manually. The inventory describes the nodes accessible over SSH; Ansible prepares the systems, installs containerd and Kubernetes, initializes the control plane, joins the nodes, and installs the cluster network.
 
-## Ce que le projet automatise
+## What the Project Automates
 
-- préparation Ubuntu/Debian : swap, modules kernel, sysctl, NTP et firewall ;
-- installation de containerd, kubelet, kubeadm et kubectl ;
-- initialisation du premier control plane avec kubeadm ;
-- ajout de control planes supplémentaires et de workers ;
-- installation de Calico, Flannel ou Weave ;
-- installation optionnelle d'Ingress NGINX, Metrics Server et cert-manager ;
-- validation finale des nœuds et de l'état du cluster ;
-- exécution par étapes grâce aux tags Ansible.
+- Ubuntu/Debian preparation: swap, kernel modules, sysctl, NTP, and firewall;
+- installation of containerd, kubelet, kubeadm, and kubectl;
+- initialization of the first control plane with kubeadm;
+- addition of extra control planes and workers;
+- installation of Calico, Flannel, or Weave;
+- optional installation of NGINX Ingress, Metrics Server, and cert-manager;
+- final validation of the nodes and cluster state;
+- staged execution through Ansible tags.
 
-Le projet vise un déploiement reproductible sur une infrastructure existante. Il ne provisionne pas les machines et ne remplace pas une architecture de production complète avec load balancer externe, sauvegardes et gestion centralisée des secrets.
+The project targets reproducible deployments on existing infrastructure. It does not provision machines and does not replace a complete production architecture with an external load balancer, backups, and centralized secret management.
 
-## Prérequis
+## Prerequisites
 
-- Ansible 2.9 ou une version plus récente ;
-- nœuds Ubuntu/Debian avec au moins 2 CPU et 2 Go de RAM ;
-- accès SSH depuis la machine qui exécute Ansible ;
-- un utilisateur avec privilèges `sudo` ;
-- connectivité réseau entre les nœuds ;
-- une seule version de Kubernetes définie dans `group_vars/all.yml`.
+- Ansible 2.9 or later;
+- Ubuntu/Debian nodes with at least 2 CPUs and 2 GB of RAM;
+- SSH access from the machine that runs Ansible;
+- a user with `sudo` privileges;
+- network connectivity between the nodes;
+- a single Kubernetes version defined in `group_vars/all.yml`.
 
-## Déploiement rapide
+## Quick Deployment
 
 ```bash
 cp inventory/hosts.ini.example inventory/hosts.ini
-# Adapter les adresses, l'utilisateur et la clé SSH
+# Adjust the addresses, user, and SSH key
 vim inventory/hosts.ini
 vim group_vars/all.yml
 
@@ -38,32 +38,34 @@ make setup
 make validate
 ```
 
-## CLI de vérification
+## Verification CLI
 
-Le premier module Go vérifie les dépendances de la machine de contrôle avant de lancer Ansible :
+The first Go module checks the control machine's dependencies before running Ansible:
 
 ```bash
 go run ./cli/cmd/kube-bootstrap check
 ```
 
-Les commandes obligatoires sont `ansible`, `ansible-playbook`, `ssh` et `ssh-keygen`. `kubectl` est optionnel et sert à la validation locale du cluster. Un outil obligatoire absent bloque le déploiement et indique le futur module `kube-bootstrap install`.
+The required commands are `ansible`, `ansible-playbook`, `ssh`, and `ssh-keygen`. `kubectl` is optional and is used for local cluster validation. A missing required tool blocks deployment and points to the future `kube-bootstrap install` module.
 
-Pour exécuter le même contrôle avec le Makefile :
+The command exits with status `0` when all required tools are installed, `1` when a required tool is missing, and `2` for invalid usage. Optional tools are reported but do not block deployment.
+
+To run the same check with the Makefile:
 
 ```bash
 make test
 make check
 ```
 
-Le module `check` est testé avec un exécuteur simulé ; les tests ne dépendent donc pas des outils installés sur la machine de développement. Le code du CLI est isolé dans le dossier `cli/`, séparément des playbooks et rôles Ansible.
+The `check` module is tested with a mock executor, so the tests do not depend on tools installed on the development machine. The CLI code is isolated in the `cli/` directory, separately from the Ansible playbooks and roles.
 
-Le playbook complet est disponible dans `playbooks/site.yml`. Pour une exécution sans `make` :
+The complete playbook is available in `playbooks/site.yml`. To run it without `make`:
 
 ```bash
 ansible-playbook -i inventory/hosts.ini playbooks/site.yml
 ```
 
-## Exemple de résultat attendu
+## Expected Output Example
 
 ```text
 NAME      STATUS   ROLES           VERSION
@@ -74,22 +76,22 @@ worker-2  Ready    <none>          v1.28.x
 
 ## Configuration
 
-Les variables principales sont définies dans `group_vars/all.yml` :
+The main variables are defined in `group_vars/all.yml`:
 
-| Variable                | Rôle                                     |
-| ----------------------- | ---------------------------------------- |
-| `kubernetes_version`    | Version installée de Kubernetes          |
-| `container_runtime`     | `containerd` ou `docker`                 |
-| `networking_plugin`     | `calico`, `flannel` ou `weave`           |
-| `pod_network_cidr`      | CIDR utilisé par le réseau des pods      |
-| `service_cidr`          | CIDR utilisé par les services Kubernetes |
-| `enable_ingress_nginx`  | Active l'Ingress Controller              |
-| `enable_metrics_server` | Active Metrics Server                    |
-| `enable_firewall`       | Configure UFW sur les nœuds              |
+| Variable                | Purpose                          |
+| ----------------------- | -------------------------------- |
+| `kubernetes_version`    | Installed Kubernetes version     |
+| `container_runtime`     | `containerd` or `docker`         |
+| `networking_plugin`     | `calico`, `flannel`, or `weave`  |
+| `pod_network_cidr`      | CIDR used by the pod network     |
+| `service_cidr`          | CIDR used by Kubernetes services |
+| `enable_ingress_nginx`  | Enables the Ingress Controller   |
+| `enable_metrics_server` | Enables Metrics Server           |
+| `enable_firewall`       | Configures UFW on the nodes      |
 
-Les tokens et certificats de join sont des données sensibles. Ils ne doivent pas être commités dans Git ni affichés dans les logs CI.
+Join tokens and certificates are sensitive data. They must not be committed to Git or displayed in CI logs.
 
-## Exécution par étapes
+## Staged Execution
 
 ```bash
 make prerequisites
@@ -99,21 +101,21 @@ make networking
 make validate
 ```
 
-Les mêmes étapes sont disponibles avec les tags `prerequisites`, `init`, `join`, `workers`, `control-plane`, `networking` et `finalize`.
+The same stages are available with the `prerequisites`, `init`, `join`, `workers`, `control-plane`, `networking`, and `finalize` tags.
 
-## Structure
+## Project Structure
 
 ```text
-inventory/       Inventaire des machines existantes
-group_vars/      Configuration commune du cluster
-playbooks/       Orchestration globale
-roles/common/    Préparation OS et composants Kubernetes
-roles/kubeadm-init/  Initialisation du premier control plane
-roles/kubeadm-join/  Ajout des autres nœuds
-roles/networking/   Add-ons et composants réseau
+inventory/       Existing machine inventory
+group_vars/      Shared cluster configuration
+playbooks/       Global orchestration
+roles/common/    OS preparation and Kubernetes components
+roles/kubeadm-init/  First control plane initialization
+roles/kubeadm-join/  Additional node joining
+roles/networking/   Network add-ons and components
 ```
 
-## Validation et dépannage
+## Validation and Troubleshooting
 
 ```bash
 make validate
@@ -123,8 +125,8 @@ journalctl -u kubelet -f
 journalctl -u containerd -f
 ```
 
-Pour modifier la taille du cluster, ajouter ou supprimer des hôtes dans l'inventaire puis relancer le playbook. Les tâches de bootstrap sont conçues pour être rejouées sans réinitialiser un nœud déjà configuré.
+To change the cluster size, add or remove hosts from the inventory and rerun the playbook. The bootstrap tasks are designed to be rerun without resetting an already configured node.
 
-## Compétences démontrées
+## Demonstrated Skills
 
-Ansible, Linux, systemd, SSH, containerd, kubeadm, Kubernetes, réseau, firewall, idempotence, automatisation et validation d'infrastructure.
+Ansible, Linux, systemd, SSH, containerd, kubeadm, Kubernetes, networking, firewall, idempotence, automation, and infrastructure validation.
