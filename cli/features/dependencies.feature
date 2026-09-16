@@ -17,3 +17,16 @@ Feature: Local tool verification
     When the user runs "kube-bootstrap check"
     Then the environment is reported as incomplete
     And dependency installation is recommended
+
+  Scenario: Missing required tools produce an installation plan
+    Given ansible and ansible-playbook are missing
+    And ssh and ssh-keygen are installed
+    When the user runs "kube-bootstrap install"
+    Then an apt installation plan for ansible is displayed
+    And no package is installed
+
+  Scenario: The user explicitly applies an installation plan
+    Given ansible and ansible-playbook are missing
+    And ssh and ssh-keygen are installed
+    When the user runs "kube-bootstrap install --apply"
+    Then ansible is installed through the detected package manager

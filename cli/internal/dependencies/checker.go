@@ -23,6 +23,16 @@ type CheckResult struct {
 	Ready        bool
 }
 
+func (result CheckResult) MissingRequired() []Dependency {
+	missing := make([]Dependency, 0)
+	for _, dependency := range result.Dependencies {
+		if dependency.Required && !dependency.Installed {
+			missing = append(missing, dependency)
+		}
+	}
+	return missing
+}
+
 func (result CheckResult) Dependency(name string) *Dependency {
 	for index := range result.Dependencies {
 		if result.Dependencies[index].Name == name {

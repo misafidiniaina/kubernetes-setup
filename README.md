@@ -46,15 +46,22 @@ The first Go module checks the control machine's dependencies before running Ans
 go run ./cli/cmd/kube-bootstrap check
 ```
 
-The required commands are `ansible`, `ansible-playbook`, `ssh`, and `ssh-keygen`. `kubectl` is optional and is used for local cluster validation. A missing required tool blocks deployment and points to the future `kube-bootstrap install` module.
+The required commands are `ansible`, `ansible-playbook`, `ssh`, and `ssh-keygen`. `kubectl` is optional and is used for local cluster validation. A missing required tool blocks deployment and points to the `kube-bootstrap install` module.
 
 The command exits with status `0` when all required tools are installed, `1` when a required tool is missing, and `2` for invalid usage. Optional tools are reported but do not block deployment.
 
-To run the same check with the Makefile:
+To run the checks directly with Go:
 
 ```bash
-make test
-make check
+go -C cli test ./...
+go -C cli run ./cmd/kube-bootstrap check
+```
+
+The installer supports Linux systems with `apt-get`. It prints an installation plan by default; pass `--apply` to execute it with `sudo`:
+
+```bash
+go -C cli run ./cmd/kube-bootstrap install
+go -C cli run ./cmd/kube-bootstrap install --apply
 ```
 
 The `check` module is tested with a mock executor, so the tests do not depend on tools installed on the development machine. The CLI code is isolated in the `cli/` directory, separately from the Ansible playbooks and roles.

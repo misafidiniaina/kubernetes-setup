@@ -72,3 +72,15 @@ func TestRunRejectsUnexpectedArguments(t *testing.T) {
 		t.Fatalf("expected argument error, got %q", stderr.String())
 	}
 }
+
+func TestParseApply(t *testing.T) {
+	apply, err := parseApply([]string{"--apply"})
+	if err != nil || !apply {
+		t.Fatalf("expected --apply to be accepted, got apply=%t error=%v", apply, err)
+	}
+
+	apply, err = parseApply([]string{"--unexpected"})
+	if err == nil || apply {
+		t.Fatalf("expected unexpected argument to be rejected, got apply=%t error=%v", apply, err)
+	}
+}
