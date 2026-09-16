@@ -116,7 +116,10 @@ func TestCheckDependenciesAllowsMissingOptionalTool(t *testing.T) {
 }
 
 func TestCheckDependenciesKeepsToolVersion(t *testing.T) {
-	result := Check(completeRunner())
+	runner := completeRunner()
+	runner.versions["ansible-playbook"] = "ansible-playbook [core 2.16.5]\nCopyright (C) 2024"
+
+	result := Check(runner)
 	dependency := result.Dependency("ansible-playbook")
 
 	if dependency.Version != "ansible-playbook [core 2.16.5]" {

@@ -56,7 +56,7 @@ func Check(runner CommandRunner) CheckResult {
 			dependency.Installed = true
 			version, versionErr := runner.Version(definition.name)
 			if versionErr == nil {
-				dependency.Version = strings.TrimSpace(version)
+				dependency.Version = firstVersionLine(version)
 			}
 		} else if definition.required {
 			result.Ready = false
@@ -64,6 +64,16 @@ func Check(runner CommandRunner) CheckResult {
 		result.Dependencies = append(result.Dependencies, dependency)
 	}
 	return result
+}
+
+func firstVersionLine(version string) string {
+	for _, line := range strings.Split(version, "\n") {
+		line = strings.TrimSpace(line)
+		if line != "" {
+			return line
+		}
+	}
+	return ""
 }
 
 type SystemCommandRunner struct{}
